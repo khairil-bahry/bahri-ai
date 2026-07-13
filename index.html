@@ -4431,6 +4431,641 @@ This typically indicates that your device does not have a healthy Internet conne
   </head>
   <body class="bg-[#080d16] text-gray-100 antialiased selection:bg-indigo-600 selection:text-white">
     <div id="root"></div>
-  </body>
+  
+<!-- ============================================================
+     INTEGRASI MODULE - AI Studio Pro Integration Center
+     ============================================================ -->
+<style>
+/* INTEGRASI PANEL STYLES */
+#integ-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(8,13,22,0.97);
+  backdrop-filter: blur(16px);
+  display: flex; flex-direction: column;
+  font-family: 'Inter', system-ui, sans-serif;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+#integ-overlay.open { opacity: 1; pointer-events: all; }
+
+/* Topbar */
+.ig-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 24px; border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.015); flex-shrink: 0;
+}
+.ig-topbar-left { display: flex; align-items: center; gap: 10px; }
+.ig-topbar-left h1 { font-size: 17px; font-weight: 800; color: #fff; letter-spacing: -0.02em; margin: 0; }
+.ig-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff; padding: 3px 8px; border-radius: 20px;
+}
+.ig-close {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  color: #9ca3af; width: 34px; height: 34px; border-radius: 10px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; transition: all 0.15s; font-family: inherit;
+}
+.ig-close:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+/* Stats bar */
+.ig-statsbar {
+  display: flex; gap: 20px; padding: 8px 24px; flex-shrink: 0;
+  background: rgba(99,102,241,0.03); border-bottom: 1px solid rgba(99,102,241,0.06);
+}
+.ig-stat { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+.ig-stat-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.ig-stat-dot.g { background: #22c55e; box-shadow: 0 0 5px #22c55e88; }
+.ig-stat-dot.r { background: #6b7280; }
+.ig-stat-lbl { color: #6b7280; }
+.ig-stat-val { color: #e5e7eb; font-weight: 700; font-family: 'Fira Code', monospace; }
+
+/* Body */
+.ig-body { display: flex; flex: 1; overflow: hidden; }
+
+/* Sidebar */
+.ig-sidebar {
+  width: 210px; flex-shrink: 0; border-right: 1px solid rgba(255,255,255,0.05);
+  overflow-y: auto; padding: 10px 8px; background: rgba(255,255,255,0.01);
+}
+.ig-sidebar-title {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: #374151; padding: 4px 10px 8px; font-family: 'Fira Code', monospace;
+}
+.ig-cat {
+  width: 100%; display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px; border-radius: 10px; cursor: pointer;
+  border: none; background: transparent; color: #9ca3af;
+  font-size: 12px; font-weight: 600; text-align: left;
+  transition: all 0.12s; margin-bottom: 1px; position: relative;
+  font-family: 'Inter', sans-serif;
+}
+.ig-cat:hover { background: rgba(255,255,255,0.04); color: #e5e7eb; }
+.ig-cat.active { background: rgba(99,102,241,0.1); color: #a5b4fc; }
+.ig-cat.active::before {
+  content: ''; position: absolute; left: 0; top: 20%; bottom: 20%;
+  width: 3px; background: #6366f1; border-radius: 0 3px 3px 0;
+}
+.ig-cat-emoji { font-size: 15px; flex-shrink: 0; }
+.ig-cat-name { flex: 1; }
+.ig-cat-count {
+  font-size: 9px; font-weight: 700; font-family: 'Fira Code', monospace;
+  background: rgba(255,255,255,0.06); color: #6b7280;
+  padding: 1px 5px; border-radius: 8px;
+}
+.ig-cat.active .ig-cat-count { background: rgba(99,102,241,0.18); color: #818cf8; }
+
+/* Content */
+.ig-content { flex: 1; overflow-y: auto; padding: 20px 22px; }
+.ig-content-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.ig-content-title h2 { font-size: 15px; font-weight: 800; color: #f1f5f9; margin: 0 0 2px; }
+.ig-content-title p { font-size: 11px; color: #6b7280; margin: 0; }
+.ig-search {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px; padding: 7px 12px; font-size: 11px; color: #fff;
+  outline: none; width: 180px; font-family: 'Inter', sans-serif;
+  transition: border-color 0.15s;
+}
+.ig-search:focus { border-color: rgba(99,102,241,0.4); }
+.ig-search::placeholder { color: #374151; }
+
+/* Grid */
+.ig-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+
+/* Card */
+.ig-card {
+  background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 18px; padding: 18px; transition: all 0.2s; position: relative; overflow: hidden;
+}
+.ig-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+}
+.ig-card:hover { border-color: rgba(99,102,241,0.18); background: rgba(99,102,241,0.025); }
+.ig-card.connected { border-color: rgba(34,197,94,0.15); background: rgba(34,197,94,0.015); }
+
+/* Card header */
+.ig-card-hdr { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.ig-card-name { font-size: 13px; font-weight: 700; color: #f1f5f9; margin: 0 0 3px; }
+.ig-card-desc { font-size: 11px; color: #6b7280; line-height: 1.5; margin: 0; }
+
+/* Status badge */
+.ig-badge-status {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 20px; flex-shrink: 0; white-space: nowrap;
+  font-family: 'Fira Code', monospace;
+}
+.ig-badge-status.con { background: rgba(34,197,94,0.1); color: #22c55e; border: 1px solid rgba(34,197,94,0.2); }
+.ig-badge-status.dis { background: rgba(107,114,128,0.1); color: #6b7280; border: 1px solid rgba(107,114,128,0.15); }
+.ig-sdot { width: 5px; height: 5px; border-radius: 50%; }
+.ig-badge-status.con .ig-sdot { background: #22c55e; animation: igpulse 1.5s infinite; }
+.ig-badge-status.dis .ig-sdot { background: #6b7280; }
+@keyframes igpulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* API Key */
+.ig-key-row { margin-top: 12px; }
+.ig-key-lbl { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #4b5563; margin-bottom: 5px; font-family: 'Fira Code', monospace; }
+.ig-key-wrap { display: flex; gap: 6px; }
+.ig-key-input {
+  flex: 1; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 9px; padding: 7px 10px; font-size: 10px; color: #a5b4fc;
+  outline: none; font-family: 'Fira Code', monospace; transition: border-color 0.15s;
+}
+.ig-key-input:focus { border-color: rgba(99,102,241,0.4); }
+.ig-key-input::placeholder { color: #374151; }
+.ig-key-save {
+  background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.2);
+  color: #818cf8; border-radius: 9px; padding: 7px 11px;
+  font-size: 10px; font-weight: 700; cursor: pointer; transition: all 0.12s;
+  font-family: 'Inter', sans-serif; white-space: nowrap;
+}
+.ig-key-save:hover { background: rgba(99,102,241,0.25); color: #a5b4fc; }
+
+/* Actions */
+.ig-actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+.ig-btn {
+  flex: 1; min-width: 70px; padding: 7px 10px; border-radius: 9px;
+  font-size: 10px; font-weight: 700; cursor: pointer; border: none;
+  transition: all 0.12s; display: flex; align-items: center; justify-content: center;
+  gap: 4px; font-family: 'Inter', sans-serif;
+}
+.ig-btn-con { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; box-shadow: 0 2px 8px rgba(99,102,241,0.25); }
+.ig-btn-con:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.ig-btn-dis { background: rgba(239,68,68,0.09); color: #f87171; border: 1px solid rgba(239,68,68,0.15); }
+.ig-btn-dis:hover { background: rgba(239,68,68,0.14); }
+.ig-btn-test { background: rgba(255,255,255,0.04); color: #9ca3af; border: 1px solid rgba(255,255,255,0.07); }
+.ig-btn-test:hover { background: rgba(255,255,255,0.08); color: #e5e7eb; }
+.ig-btn-docs { background: rgba(99,102,241,0.07); color: #818cf8; border: 1px solid rgba(99,102,241,0.12); flex: none; padding: 7px 12px; }
+.ig-btn-docs:hover { background: rgba(99,102,241,0.12); }
+.ig-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+/* Test result */
+.ig-result {
+  margin-top: 8px; padding: 6px 10px; border-radius: 8px;
+  font-size: 10px; font-family: 'Fira Code', monospace; display: none;
+}
+.ig-result.ok { background: rgba(34,197,94,0.07); color: #22c55e; border: 1px solid rgba(34,197,94,0.12); }
+.ig-result.err { background: rgba(239,68,68,0.07); color: #f87171; border: 1px solid rgba(239,68,68,0.12); }
+.ig-result.run { background: rgba(99,102,241,0.07); color: #818cf8; border: 1px solid rgba(99,102,241,0.1); }
+
+/* FAB button to open integration panel */
+#integ-fab {
+  position: fixed; bottom: 90px; left: 12px; z-index: 9998;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff; border: none; border-radius: 14px;
+  padding: 9px 14px; font-size: 11px; font-weight: 700;
+  cursor: pointer; box-shadow: 0 4px 16px rgba(99,102,241,0.35);
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'Inter', sans-serif; letter-spacing: 0.02em;
+  transition: all 0.15s; white-space: nowrap;
+}
+#integ-fab:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,102,241,0.45); filter: brightness(1.05); }
+
+/* Scrollbars */
+.ig-sidebar::-webkit-scrollbar, .ig-content::-webkit-scrollbar { width: 3px; }
+.ig-sidebar::-webkit-scrollbar-thumb, .ig-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+
+/* Mobile */
+@media (max-width: 640px) {
+  .ig-sidebar { width: 54px; }
+  .ig-cat-name, .ig-cat-count, .ig-sidebar-title { display: none; }
+  .ig-cat { justify-content: center; padding: 10px; }
+  .ig-grid { grid-template-columns: 1fr; }
+  .ig-statsbar { display: none; }
+  #integ-fab { left: 8px; bottom: 76px; }
+}
+
+/* Nav inject button */
+.ig-nav-btn {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 12px; text-align: left;
+  border: none; background: transparent; cursor: pointer;
+  font-size: 12px; font-weight: 600; transition: all 0.15s;
+  font-family: 'Inter', sans-serif; color: #9ca3af;
+}
+.ig-nav-btn:hover { background: rgba(255,255,255,0.05); color: #f1f5f9; }
+.ig-nav-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+</style>
+
+<!-- Integration FAB -->
+<button id="integ-fab" onclick="openIntegrasi()">
+  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+  </svg>
+  Integrasi
+</button>
+
+<!-- Integration Overlay Panel -->
+<div id="integ-overlay">
+  <div class="ig-topbar">
+    <div class="ig-topbar-left">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>
+      <h1>Integrasi</h1>
+      <span class="ig-badge">Integration Hub</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span id="ig-connected-count" style="font-size:11px;color:#6b7280;font-family:'Fira Code',monospace;"></span>
+      <button class="ig-close" onclick="closeIntegrasi()" title="Tutup">✕</button>
+    </div>
+  </div>
+  <div class="ig-statsbar" id="ig-statsbar"></div>
+  <div class="ig-body">
+    <div class="ig-sidebar" id="ig-sidebar"></div>
+    <div class="ig-content" id="ig-content"></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // =====================================================
+  // INTEGRASI MODULE - AI Studio Pro
+  // =====================================================
+  const STORE_KEY = 'ai_studio_pro_v2_integrations';
+  
+  const CATS = [
+    { id:'firebase', name:'Firebase', emoji:'🔥', color:'#FF6D00',
+      desc:'Platform backend Google untuk web & mobile',
+      services:[
+        {id:'fb-auth', name:'Authentication', desc:'Login email, OAuth, phone & provider sosial.', field:'API Config (JSON)', ph:'{"apiKey":"...","authDomain":"..."}', docs:'https://firebase.google.com/docs/auth'},
+        {id:'fb-fs', name:'Firestore', desc:'Database NoSQL real-time cloud-native.', field:'Project ID', ph:'my-project-id', docs:'https://firebase.google.com/docs/firestore'},
+        {id:'fb-rtdb', name:'Realtime Database', desc:'Sync data JSON real-time antar device.', field:'Database URL', ph:'https://project-default.firebaseio.com', docs:'https://firebase.google.com/docs/database'},
+        {id:'fb-storage', name:'Storage', desc:'Upload & serve file media secara aman.', field:'Bucket Name', ph:'my-project.appspot.com', docs:'https://firebase.google.com/docs/storage'},
+        {id:'fb-hosting', name:'Hosting', desc:'Deploy website dengan CDN global & SSL.', field:'Project ID', ph:'my-firebase-project', docs:'https://firebase.google.com/docs/hosting'},
+        {id:'fb-analytics', name:'Analytics', desc:'Analitik perilaku pengguna tanpa batas.', field:'Measurement ID', ph:'G-XXXXXXXXXX', docs:'https://firebase.google.com/docs/analytics'},
+        {id:'fb-fcm', name:'Cloud Messaging', desc:'Push notification multi-platform.', field:'Server Key', ph:'AAAA...', docs:'https://firebase.google.com/docs/cloud-messaging'},
+      ]
+    },
+    { id:'cloudinary', name:'Cloudinary', emoji:'☁️', color:'#3448C5',
+      desc:'Platform media cloud dengan transformasi otomatis',
+      services:[
+        {id:'cl-img', name:'Image Upload', desc:'Upload, transform & optimasi gambar otomatis.', field:'Cloud Name', ph:'your-cloud-name', docs:'https://cloudinary.com/documentation/image_upload_api_reference'},
+        {id:'cl-vid', name:'Video Upload', desc:'Upload & streaming video dengan transcoding.', field:'API Key', ph:'123456789012345', docs:'https://cloudinary.com/documentation/video_upload_api_reference'},
+        {id:'cl-folder', name:'Folder Manager', desc:'Kelola struktur folder dan aset media.', field:'API Secret', ph:'abc123...', docs:'https://cloudinary.com/documentation/admin_api'},
+        {id:'cl-lib', name:'Media Library', desc:'Widget browser untuk media library.', field:'Upload Preset', ph:'unsigned_preset_name', docs:'https://cloudinary.com/documentation/media_library_widget'},
+      ]
+    },
+    { id:'google', name:'Google', emoji:'🌍', color:'#4285F4',
+      desc:'Suite API layanan Google Cloud',
+      services:[
+        {id:'g-maps', name:'Google Maps', desc:'Embed peta interaktif di website.', field:'Maps API Key', ph:'AIza...', docs:'https://developers.google.com/maps'},
+        {id:'g-places', name:'Places API', desc:'Autocomplete & pencarian lokasi.', field:'API Key', ph:'AIza...', docs:'https://developers.google.com/maps/documentation/places'},
+        {id:'g-geo', name:'Geocoding', desc:'Alamat ke koordinat & sebaliknya.', field:'API Key', ph:'AIza...', docs:'https://developers.google.com/maps/documentation/geocoding'},
+        {id:'g-dir', name:'Directions', desc:'Rute & petunjuk arah antar lokasi.', field:'API Key', ph:'AIza...', docs:'https://developers.google.com/maps/documentation/directions'},
+        {id:'g-oauth', name:'OAuth Login', desc:'Login dengan akun Google.', field:'Client ID', ph:'xxx.apps.googleusercontent.com', docs:'https://developers.google.com/identity'},
+        {id:'g-ga', name:'Analytics', desc:'Lacak traffic & konversi.', field:'Measurement ID', ph:'G-XXXXXXXXXX', docs:'https://developers.google.com/analytics'},
+        {id:'g-tag', name:'Tag Manager', desc:'Kelola tag tanpa ubah kode.', field:'Container ID', ph:'GTM-XXXXXXX', docs:'https://developers.google.com/tag-platform/tag-manager'},
+        {id:'g-sc', name:'Search Console', desc:'Monitor performa SEO Google.', field:'Site URL', ph:'https://yourdomain.com', docs:'https://developers.google.com/search/docs'},
+      ]
+    },
+    { id:'payment', name:'Payment Gateway', emoji:'💳', color:'#00C896',
+      desc:'Integrasi pembayaran online Indonesia & global',
+      services:[
+        {id:'pay-mid', name:'Midtrans', desc:'Payment gateway terpopuler Indonesia.', field:'Server Key', ph:'SB-Mid-server-...', docs:'https://docs.midtrans.com'},
+        {id:'pay-xen', name:'Xendit', desc:'Platform pembayaran digital Indonesia & SEA.', field:'Secret Key', ph:'xnd_development_...', docs:'https://developers.xendit.co'},
+        {id:'pay-str', name:'Stripe', desc:'Platform pembayaran global terkemuka.', field:'Secret Key', ph:'sk_test_...', docs:'https://stripe.com/docs'},
+        {id:'pay-pp', name:'PayPal', desc:'Terima pembayaran PayPal internasional.', field:'Client ID', ph:'AaB...', docs:'https://developer.paypal.com'},
+        {id:'pay-doku', name:'DOKU', desc:'Payment gateway Indonesia (DOKU Wallet).', field:'Client ID', ph:'MCH-...', docs:'https://developers.doku.com'},
+      ]
+    },
+    { id:'email', name:'Email', emoji:'📧', color:'#EA4335',
+      desc:'Layanan pengiriman email transaksional',
+      services:[
+        {id:'em-smtp', name:'SMTP', desc:'Kirim email via server SMTP kustom.', field:'SMTP Host', ph:'smtp.yourdomain.com', docs:''},
+        {id:'em-gmail', name:'Gmail SMTP', desc:'Kirim email melalui akun Gmail.', field:'App Password', ph:'xxxx xxxx xxxx xxxx', docs:'https://support.google.com/accounts/answer/185833'},
+        {id:'em-sg', name:'SendGrid', desc:'Platform email delivery skala besar.', field:'API Key', ph:'SG.xxx...', docs:'https://docs.sendgrid.com'},
+        {id:'em-mg', name:'Mailgun', desc:'API email kuat untuk developer.', field:'API Key', ph:'key-...', docs:'https://documentation.mailgun.com'},
+        {id:'em-re', name:'Resend', desc:'Email API modern untuk developer.', field:'API Key', ph:'re_xxx...', docs:'https://resend.com/docs'},
+      ]
+    },
+    { id:'whatsapp', name:'WhatsApp', emoji:'📱', color:'#25D366',
+      desc:'Integrasi pesan WhatsApp bisnis',
+      services:[
+        {id:'wa-gw', name:'WhatsApp Gateway', desc:'Kirim & terima pesan WhatsApp.', field:'API Token', ph:'token123...', docs:''},
+        {id:'wa-biz', name:'WhatsApp Business API', desc:'API resmi WhatsApp Business Meta.', field:'Access Token', ph:'EAAxx...', docs:'https://developers.facebook.com/docs/whatsapp'},
+        {id:'wa-qr', name:'QR Login', desc:'Login WhatsApp via scan QR Code.', field:'Session ID', ph:'session-name', docs:''},
+        {id:'wa-bc', name:'Broadcast', desc:'Pesan massal ke banyak kontak.', field:'API URL', ph:'https://api.yourgateway.com', docs:''},
+        {id:'wa-ar', name:'Auto Reply', desc:'Balas otomatis berdasarkan keyword.', field:'Webhook URL', ph:'https://yourdomain.com/webhook', docs:''},
+      ]
+    },
+    { id:'notification', name:'Notification', emoji:'🔔', color:'#FF9800',
+      desc:'Push notification multi-platform',
+      services:[
+        {id:'notif-os', name:'OneSignal', desc:'Push notification multi-platform gratis.', field:'App ID', ph:'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', docs:'https://documentation.onesignal.com'},
+        {id:'notif-fcm', name:'Firebase Notification', desc:'Push via Firebase Cloud Messaging.', field:'Server Key', ph:'AAAA...', docs:'https://firebase.google.com/docs/cloud-messaging'},
+      ]
+    },
+    { id:'ai', name:'AI', emoji:'🤖', color:'#7C3AED',
+      desc:'Platform kecerdasan buatan terkemuka',
+      services:[
+        {id:'ai-oai', name:'OpenAI', desc:'GPT-4o, DALL-E, Whisper & model OpenAI.', field:'API Key', ph:'sk-...', docs:'https://platform.openai.com/docs'},
+        {id:'ai-gem', name:'Gemini', desc:'Google Gemini Pro & Flash multimodal AI.', field:'API Key', ph:'AIza...', docs:'https://ai.google.dev/docs'},
+        {id:'ai-cla', name:'Claude', desc:'Anthropic Claude — AI coding & reasoning.', field:'API Key', ph:'sk-ant-...', docs:'https://docs.anthropic.com'},
+        {id:'ai-grk', name:'Grok', desc:'xAI Grok — real-time AI dari X/Twitter.', field:'API Key', ph:'xai-...', docs:'https://docs.x.ai'},
+        {id:'ai-ds', name:'DeepSeek', desc:'Open-source frontier AI model.', field:'API Key', ph:'sk-...', docs:'https://platform.deepseek.com/docs'},
+      ]
+    },
+    { id:'database', name:'Database', emoji:'🗄️', color:'#0891B2',
+      desc:'Koneksi database untuk backend website',
+      services:[
+        {id:'db-my', name:'MySQL', desc:'Database relasional paling populer dunia.', field:'Connection String', ph:'mysql://user:pass@host/db', docs:'https://dev.mysql.com/doc'},
+        {id:'db-pg', name:'PostgreSQL', desc:'Database open-source paling advanced.', field:'Connection String', ph:'postgresql://user:pass@host/db', docs:'https://www.postgresql.org/docs'},
+        {id:'db-mg', name:'MongoDB', desc:'Database NoSQL dokumen yang fleksibel.', field:'Connection URI', ph:'mongodb+srv://...', docs:'https://www.mongodb.com/docs'},
+        {id:'db-sb', name:'Supabase', desc:'Open-source Firebase alternative + PostgreSQL.', field:'URL + Anon Key', ph:'https://xxx.supabase.co', docs:'https://supabase.com/docs'},
+      ]
+    },
+    { id:'storage', name:'Storage', emoji:'📦', color:'#059669',
+      desc:'Penyimpanan file dan media cloud',
+      services:[
+        {id:'sto-fb', name:'Firebase Storage', desc:'File storage berbasis Google Cloud.', field:'Bucket URL', ph:'gs://my-project.appspot.com', docs:'https://firebase.google.com/docs/storage'},
+        {id:'sto-cl', name:'Cloudinary', desc:'Media storage + transformasi otomatis.', field:'Cloud Name', ph:'your-cloud-name', docs:'https://cloudinary.com/documentation'},
+        {id:'sto-s3', name:'AWS S3', desc:'Object storage skala enterprise Amazon.', field:'Access Key ID', ph:'AKIAIOSFODNN7EXAMPLE', docs:'https://docs.aws.amazon.com/s3'},
+        {id:'sto-sb', name:'Supabase Storage', desc:'Object storage terintegrasi Supabase.', field:'Bucket URL', ph:'https://xxx.supabase.co/storage/v1', docs:'https://supabase.com/docs/guides/storage'},
+      ]
+    },
+    { id:'security', name:'Security', emoji:'🔐', color:'#DC2626',
+      desc:'Keamanan autentikasi & enkripsi data',
+      services:[
+        {id:'sec-jwt', name:'JWT', desc:'Token autentikasi stateless web standard.', field:'Secret Key', ph:'your-super-secret-key-here', docs:'https://jwt.io/introduction'},
+        {id:'sec-oauth', name:'OAuth 2.0', desc:'Framework otorisasi standar industri.', field:'Client Secret', ph:'oauth-secret-...', docs:'https://oauth.net/2'},
+        {id:'sec-ssl', name:'SSL / TLS', desc:'Enkripsi HTTPS untuk keamanan data.', field:'Domain', ph:'yourdomain.com', docs:'https://letsencrypt.org/docs'},
+        {id:'sec-apik', name:'API Key Manager', desc:'Kelola & rotasi API keys dengan aman.', field:'Master Key', ph:'master-key-...', docs:''},
+        {id:'sec-cors', name:'CORS Config', desc:'Cross-Origin Resource Sharing config.', field:'Allowed Origins', ph:'https://yourdomain.com', docs:'https://developer.mozilla.org/docs/Web/HTTP/CORS'},
+      ]
+    },
+    { id:'api', name:'API', emoji:'⚡', color:'#F59E0B',
+      desc:'Desain, dokumentasi & webhook API',
+      services:[
+        {id:'api-rest', name:'REST API', desc:'Endpoint REST dengan dokumentasi auto.', field:'Base URL', ph:'https://api.yourdomain.com/v1', docs:'https://restfulapi.net'},
+        {id:'api-gql', name:'GraphQL', desc:'Query language API yang fleksibel.', field:'Endpoint', ph:'https://api.yourdomain.com/graphql', docs:'https://graphql.org/learn'},
+        {id:'api-wh', name:'Webhook', desc:'HTTP callback untuk event-driven app.', field:'Secret Token', ph:'whsec_...', docs:'https://webhooks.fyi'},
+      ]
+    },
+  ];
+
+  // ---- State ----
+  let state = { cat: 'firebase', search: '', integrations: {} };
+  
+  function loadState() {
+    try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }
+    catch { return {}; }
+  }
+  function saveState() {
+    localStorage.setItem(STORE_KEY, JSON.stringify(state.integrations));
+  }
+  function getSvc(id) { return state.integrations[id] || { connected: false, apiKey: '' }; }
+  function setSvc(id, data) {
+    state.integrations[id] = { ...getSvc(id), ...data };
+    saveState();
+  }
+
+  // ---- Stats ----
+  function countConnected() {
+    let n = 0;
+    CATS.forEach(c => c.services.forEach(s => { if(getSvc(s.id).connected) n++; }));
+    return n;
+  }
+  function totalServices() {
+    return CATS.reduce((a,c) => a + c.services.length, 0);
+  }
+
+  // ---- Render Sidebar ----
+  function renderSidebar() {
+    const el = document.getElementById('ig-sidebar');
+    if (!el) return;
+    let html = '<div class="ig-sidebar-title">Kategori</div>';
+    CATS.forEach(c => {
+      const conCount = c.services.filter(s => getSvc(s.id).connected).length;
+      html += `<button class="ig-cat${state.cat===c.id?' active':''}" onclick="igSelectCat('${c.id}')">
+        <span class="ig-cat-emoji">${c.emoji}</span>
+        <span class="ig-cat-name">${c.name}</span>
+        <span class="ig-cat-count">${conCount}/${c.services.length}</span>
+      </button>`;
+    });
+    el.innerHTML = html;
+  }
+
+  // ---- Render Content ----
+  function renderContent() {
+    const el = document.getElementById('ig-content');
+    if (!el) return;
+    const cat = CATS.find(c => c.id === state.cat);
+    if (!cat) return;
+    
+    const q = state.search.toLowerCase();
+    const svcs = cat.services.filter(s => !q || s.name.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q));
+    
+    let cards = svcs.map(s => {
+      const sv = getSvc(s.id);
+      const con = sv.connected;
+      return `<div class="ig-card${con?' connected':''}" id="igcard-${s.id}">
+        <div class="ig-card-hdr">
+          <div>
+            <p class="ig-card-name">${s.name}</p>
+            <p class="ig-card-desc">${s.desc}</p>
+          </div>
+          <span class="ig-badge-status ${con?'con':'dis'}">
+            <span class="ig-sdot"></span>
+            ${con?'Connected':'Disconnected'}
+          </span>
+        </div>
+        <div class="ig-key-row">
+          <div class="ig-key-lbl">${s.field}</div>
+          <div class="ig-key-wrap">
+            <input class="ig-key-input" id="igkey-${s.id}"
+              type="password" placeholder="${s.ph}"
+              value="${sv.apiKey||''}"
+              oninput="igKeyChange('${s.id}', this.value)"
+              onfocus="this.type='text'" onblur="this.type='password'; if(!this.value) this.type='password'">
+            <button class="ig-key-save" onclick="igSaveKey('${s.id}')">Simpan</button>
+          </div>
+        </div>
+        <div class="ig-actions">
+          ${con
+            ? `<button class="ig-btn ig-btn-dis" onclick="igDisconnect('${s.id}')">⏸ Disconnect</button>`
+            : `<button class="ig-btn ig-btn-con" onclick="igConnect('${s.id}')">⚡ Connect</button>`
+          }
+          <button class="ig-btn ig-btn-test" onclick="igTest('${s.id}')">🧪 Test</button>
+          ${s.docs ? `<button class="ig-btn ig-btn-docs" onclick="window.open('${s.docs}','_blank')" title="Dokumentasi">📖</button>` : ''}
+        </div>
+        <div class="ig-result" id="igres-${s.id}"></div>
+      </div>`;
+    }).join('');
+    
+    if (!cards) cards = `<div style="grid-column:1/-1;text-align:center;padding:48px 0;color:#6b7280;">
+      <div style="font-size:28px;margin-bottom:8px;">🔍</div>
+      <p style="font-size:13px;font-weight:600;">Tidak ada layanan ditemukan</p>
+      <p style="font-size:11px;margin-top:4px;">Coba kata kunci lain</p></div>`;
+    
+    el.innerHTML = `<div class="ig-content-hdr">
+      <div class="ig-content-title">
+        <h2>${cat.emoji} ${cat.name}</h2>
+        <p>${cat.desc}</p>
+      </div>
+      <input class="ig-search" id="ig-search-input" placeholder="Cari layanan..." 
+        value="${state.search}" oninput="igSearch(this.value)">
+    </div>
+    <div class="ig-grid">${cards}</div>`;
+  }
+
+  // ---- Render Stats Bar ----
+  function renderStats() {
+    const el = document.getElementById('ig-statsbar');
+    if (!el) return;
+    const con = countConnected();
+    const total = totalServices();
+    el.innerHTML = `
+      <div class="ig-stat"><span class="ig-stat-dot g"></span><span class="ig-stat-lbl">Connected:</span><span class="ig-stat-val">${con}</span></div>
+      <div class="ig-stat"><span class="ig-stat-dot r"></span><span class="ig-stat-lbl">Disconnected:</span><span class="ig-stat-val">${total-con}</span></div>
+      <div class="ig-stat"><span class="ig-stat-lbl">Total Layanan:</span><span class="ig-stat-val">${total}</span></div>
+    `;
+    const cc = document.getElementById('ig-connected-count');
+    if (cc) cc.textContent = `${con}/${total} layanan aktif`;
+  }
+
+  function renderAll() {
+    renderSidebar();
+    renderContent();
+    renderStats();
+  }
+
+  // ---- Actions ----
+  window.igSelectCat = function(id) {
+    state.cat = id;
+    state.search = '';
+    renderAll();
+  };
+
+  window.igSearch = function(v) {
+    state.search = v;
+    renderContent();
+  };
+
+  window.igKeyChange = function(id, v) {
+    setSvc(id, { apiKey: v });
+  };
+
+  window.igSaveKey = function(id) {
+    const inp = document.getElementById('igkey-' + id);
+    if (inp) setSvc(id, { apiKey: inp.value });
+    igToast('API Key disimpan!', 'ok');
+  };
+
+  window.igConnect = function(id) {
+    const sv = getSvc(id);
+    if (!sv.apiKey) {
+      igToast('Masukkan API Key terlebih dahulu.', 'err');
+      return;
+    }
+    setSvc(id, { connected: true });
+    renderAll();
+    igToast('Berhasil terhubung! 🎉', 'ok');
+  };
+
+  window.igDisconnect = function(id) {
+    setSvc(id, { connected: false });
+    renderAll();
+    igToast('Layanan diputuskan.', 'warn');
+  };
+
+  window.igTest = function(id) {
+    const res = document.getElementById('igres-' + id);
+    if (!res) return;
+    const sv = getSvc(id);
+    res.style.display = 'block';
+    res.className = 'ig-result run';
+    res.textContent = '⏳ Menguji koneksi...';
+    setTimeout(() => {
+      if (!sv.apiKey) {
+        res.className = 'ig-result err';
+        res.textContent = '✗ Gagal: API Key belum dikonfigurasi';
+      } else if (!sv.connected) {
+        res.className = 'ig-result err';
+        res.textContent = '✗ Gagal: Layanan belum terhubung (klik Connect terlebih dahulu)';
+      } else {
+        res.className = 'ig-result ok';
+        res.textContent = '✓ Koneksi berhasil! Layanan aktif dan siap digunakan.';
+      }
+      setTimeout(() => { res.style.display = 'none'; }, 4000);
+    }, 1200);
+  };
+
+  // ---- Toast ----
+  function igToast(msg, type) {
+    let t = document.getElementById('ig-toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'ig-toast';
+      t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:10001;background:rgba(15,23,42,0.96);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:11px 16px;font-size:12px;font-weight:600;font-family:Inter,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,0.5);display:flex;align-items:center;gap:8px;transition:all 0.25s;max-width:300px;';
+      document.body.appendChild(t);
+    }
+    const colors = { ok:'#22c55e', err:'#f87171', warn:'#fb923c' };
+    t.style.color = colors[type] || '#e2e8f0';
+    t.style.borderColor = (colors[type]||'#fff') + '30';
+    t.textContent = msg;
+    t.style.opacity = '1';
+    t.style.transform = 'translateY(0)';
+    clearTimeout(t._tm);
+    t._tm = setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(8px)'; }, 3000);
+  }
+
+  // ---- Panel open/close ----
+  window.openIntegrasi = function() {
+    const ov = document.getElementById('integ-overlay');
+    if (ov) {
+      ov.classList.add('open');
+      renderAll();
+    }
+  };
+  window.closeIntegrasi = function() {
+    const ov = document.getElementById('integ-overlay');
+    if (ov) ov.classList.remove('open');
+  };
+
+  // Keyboard close
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeIntegrasi();
+  });
+
+  // ---- Sidebar nav injection ----
+  function injectNavBtn() {
+    const navs = document.querySelectorAll('nav.space-y-1');
+    navs.forEach(nav => {
+      if (!nav.querySelector('#ig-nav-inject')) {
+        const btn = document.createElement('button');
+        btn.id = 'ig-nav-inject';
+        btn.className = 'ig-nav-btn';
+        btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><span>Integrasi</span>`;
+        btn.onclick = () => { openIntegrasi(); };
+        // Insert after last button in nav
+        nav.appendChild(btn);
+      }
+    });
+  }
+
+  // Watch for nav to appear
+  const navObs = new MutationObserver(() => { injectNavBtn(); });
+  navObs.observe(document.body, { childList: true, subtree: true });
+
+  // Init on load
+  state.integrations = loadState();
+  document.addEventListener('DOMContentLoaded', () => {
+    injectNavBtn();
+    renderStats();
+  });
+  // Also try immediately in case DOM is ready
+  setTimeout(injectNavBtn, 100);
+  setTimeout(injectNavBtn, 500);
+  setTimeout(injectNavBtn, 1500);
+
+})();
+</script>
+</body>
 </html>
 
