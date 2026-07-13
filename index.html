@@ -1,6 +1,30 @@
 <!doctype html>
 <html lang="id">
   <head>
+    <!-- Cache bust v2 - Integrasi Update -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <script>
+      // Force unregister old SW and reload jika cache lama terdeteksi
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(regs => {
+          regs.forEach(reg => {
+            reg.update(); // paksa cek update
+          });
+        });
+        // Jika SW versi lama masih aktif, hapus cache lama
+        if (window.caches) {
+          caches.keys().then(keys => {
+            keys.forEach(key => {
+              if (key.includes('v1')) { // hapus cache v1 lama
+                caches.delete(key).then(() => console.log('[Cache] Deleted old cache:', key));
+              }
+            });
+          });
+        }
+      }
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HTML AI Studio Pro - Enterprise AI Web Builder & IDE</title>
