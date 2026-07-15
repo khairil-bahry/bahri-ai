@@ -1,70 +1,115 @@
-const CACHE_NAME = 'ril-developer-v2'; // ⬅️ naikkan angka ini setiap kali kamu update index.html, agar cache lama dibuang
-const APP_SHELL = [
+// RiL Developer — Service Worker v5
+const CACHE_NAME = 'ril-dev-v5';
+const CACHE_VERSION = '5.0.0';
+
+// File-file yang dicache untuk offline
+const STATIC_ASSETS = [
+  './',
   './index.html',
   './manifest.json',
+  './icons/icon-72.png',
+  './icons/icon-96.png',
+  './icons/icon-128.png',
+  './icons/icon-144.png',
+  './icons/icon-152.png',
   './icons/icon-192.png',
+  './icons/icon-384.png',
   './icons/icon-512.png',
-  './icons/icon-512-maskable.png',
-  './icons/apple-touch-icon.png',
+  './icons/favicon-16.png',
   './icons/favicon-32.png',
-  './icons/favicon-16.png'
+  './icons/apple-touch-icon.png',
 ];
 
-self.addEventListener('install', (event) => {
+// CDN resources yang juga di-cache
+const CDN_ASSETS = [
+  'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap',
+  'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css',
+  'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css',
+  'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+];
+
+// ════ INSTALL ════
+self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then(cache => {
+      // Cache static assets (ignore failures)
+      return Promise.allSettled([
+        ...STATIC_ASSETS.map(url => cache.add(url).catch(() => {})),
+        ...CDN_ASSETS.map(url => cache.add(url).catch(() => {})),
+      ]);
+    }).then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
+// ════ ACTIVATE ════
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+    caches.keys().then(keys =>
+      Promise.all(
+        keys
+          .filter(key => key !== CACHE_NAME)
+          .map(key => caches.delete(key))
+      )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
+// ════ FETCH — Cache-first untuk assets, Network-first untuk API ════
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url);
 
-  // Only handle same-origin GET requests. Everything else (AI API calls, image
-  // generation, CDN scripts) goes straight to the network — never cached.
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) {
+  // Jangan intercept API calls (Anthropic, OpenAI, Gemini, dll)
+  const isApiCall = [
+    'api.anthropic.com',
+    'api.openai.com',
+    'api.groq.com',
+    'openrouter.ai',
+    'generativelanguage.googleapis.com',
+    'image.pollinations.ai',
+  ].some(domain => url.hostname.includes(domain));
+
+  if (isApiCall) {
+    // Network-only untuk API — tidak di-cache
+    event.respondWith(fetch(event.request));
     return;
   }
 
-  // HTML shell (index.html / navigations): NETWORK-FIRST.
-  // This is the key fix — it means every reload tries to fetch the newest
-  // index.html first, and only falls back to the cached copy if you're offline.
-  if (req.mode === 'navigate' || req.destination === 'document') {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
-          return res;
-        })
-        .catch(() => caches.match(req))
-    );
-    return;
-  }
+  // Jangan intercept Chrome Extensions
+  if (url.protocol === 'chrome-extension:') return;
 
-  // Static assets (icons, manifest): cache-first, refreshed in background.
+  // Cache-first untuk semua asset lainnya
   event.respondWith(
-    caches.match(req).then((cached) => {
-      const network = fetch(req)
-        .then((res) => {
-          if (res && res.status === 200) {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+
+      return fetch(event.request)
+        .then(response => {
+          // Simpan response valid ke cache
+          if (response && response.status === 200 && response.type !== 'opaque') {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
           }
-          return res;
+          return response;
         })
-        .catch(() => cached);
-      return cached || network;
+        .catch(() => {
+          // Offline fallback — kembalikan index.html untuk navigasi
+          if (event.request.mode === 'navigate') {
+            return caches.match('./index.html');
+          }
+          return new Response('Offline', { status: 503 });
+        });
     })
   );
 });
 
+// ════ MESSAGE — Handle skip-waiting dari halaman ════
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});

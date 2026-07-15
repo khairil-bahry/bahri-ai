@@ -1334,14 +1334,33 @@ async function sendMessage(){
     if(usage){tokenCount+=usage;updateStats();}
     conversationHistory.push({role:'assistant',content:aiText});removeTyping();
 
-    // --- Ekstraksi HTML robust: coba ```html ... ``` dulu, fallback ke raw DOCTYPE ---
+    // --- Ekstraksi HTML robust (tahan template literal JS) ---
     let htmlCode=null;
-    const m1=aiText.match(/```html\s*([\s\S]*?)```/i);
-    if(m1){htmlCode=m1[1].trim();}
-    else{
-      // Gemini kadang mengirim raw HTML tanpa backtick — tangkap juga
-      const m2=aiText.match(/(<!DOCTYPE\s+html[\s\S]*?<\/html>)/i);
-      if(m2)htmlCode=m2[1].trim();
+    // Metode 1: cari ```html lalu ambil teks sampai ``` TERAKHIR di string
+    const openIdx=aiText.search(/```html\s*/i);
+    if(openIdx!==-1){
+      const afterOpen=aiText.indexOf('\n',openIdx);
+      const lastClose=aiText.lastIndexOf('```');
+      if(lastClose>afterOpen+1)htmlCode=aiText.slice(afterOpen+1,lastClose).trim();
+    }
+    // Metode 2: ``` (tanpa html) yang isinya ada <!DOCTYPE
+    if(!htmlCode){
+      const openIdx2=aiText.search(/```\s*\n\s*<!DOCTYPE/i);
+      if(openIdx2!==-1){
+        const afterOpen2=aiText.indexOf('\n',openIdx2);
+        const lastClose2=aiText.lastIndexOf('```');
+        if(lastClose2>afterOpen2+1)htmlCode=aiText.slice(afterOpen2+1,lastClose2).trim();
+      }
+    }
+    // Metode 3: raw <!DOCTYPE html tanpa wrapper backtick sama sekali
+    if(!htmlCode){
+      const m3=aiText.match(/(<!DOCTYPE\s+html[\s\S]*?<\/html>)/i);
+      if(m3)htmlCode=m3[1].trim();
+    }
+    // Metode 4: raw <html> tanpa DOCTYPE
+    if(!htmlCode){
+      const m4=aiText.match(/(<html[\s\S]*?<\/html>)/i);
+      if(m4)htmlCode=m4[1].trim();
     }
 
     if(htmlCode){
@@ -1419,13 +1438,26 @@ function removeTyping(){
 
 // ════════════════════ PREVIEW ════════════════════
 function updatePreview(html){
-  currentHTML=html;document.getElementById('preview-empty').style.display='none';
-  document.getElementById('preview-iframe').srcdoc=html;document.getElementById('url-display').textContent='localhost:3000/preview.html';
+  currentHTML=html;
+  const iframe=document.getElementById('preview-iframe');
+  const empty=document.getElementById('preview-empty');
+  empty.style.display='none';
+  // Force refresh: kosongkan dulu lalu isi ulang
+  iframe.removeAttribute('srcdoc');
+  requestAnimationFrame(()=>{
+    iframe.srcdoc=html;
+  });
+  document.getElementById('url-display').textContent='localhost:3000/preview.html';
   document.getElementById('sb-lines').textContent=html.split('\n').length;
   document.getElementById('sb-size').textContent=(new Blob([html]).size/1024).toFixed(1)+' KB';
 }
 function updateSavedStatus(ts){document.getElementById('sb-saved').textContent='💾 '+fmtDate(ts);}
-function refreshPreview(){if(currentHTML){const f=document.getElementById('preview-iframe');f.srcdoc='';setTimeout(()=>{f.srcdoc=currentHTML;},80);}}
+function refreshPreview(){
+  if(!currentHTML)return;
+  const f=document.getElementById('preview-iframe');
+  f.removeAttribute('srcdoc');
+  requestAnimationFrame(()=>{f.srcdoc=currentHTML;});
+}
 function openFullscreen(){if(currentHTML){const w=window.open('about:blank','_blank');w.document.write(currentHTML);w.document.close();}else showToast('Belum ada website');}
 function downloadHTML(){if(!currentHTML){showToast('Belum ada kode');return;}const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([currentHTML],{type:'text/html'}));a.download='ril-website.html';a.click();showToast('✅ Diunduh!');}
 
