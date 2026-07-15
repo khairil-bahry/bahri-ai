@@ -1449,7 +1449,7 @@ const PROVIDERS={
     detect:k=>k.startsWith('sk-proj-')||(k.startsWith('sk-')&&!k.startsWith('sk-ant-')&&!k.startsWith('sk-or-'))},
   gemini:{name:'Google Gemini',icon:'◈',color:'#F9A26C',
     models:['gemini-2.0-flash','gemini-1.5-pro','gemini-1.5-flash','gemini-1.5-flash-8b'],
-    detect:k=>k.startsWith('AIza')},
+    detect:k=>k.startsWith('AIza')||k.startsWith('AQ.')},
   groq:{name:'Groq',icon:'⚡',color:'#FA6E7C',
     models:['llama-3.3-70b-versatile','llama-3.1-8b-instant','mixtral-8x7b-32768','gemma2-9b-it'],
     detect:k=>k.startsWith('gsk_')},
@@ -1487,7 +1487,7 @@ async function fetchModels(provider,key){
       return list.length?list:fallback;
     }
     if(provider==='gemini'){
-      const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?key='+key);
+      const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models',{headers:{'x-goog-api-key':key}});
       const d=await r.json();
       const list=(d.models||[]).filter(m=>m.name.includes('gemini')).map(m=>m.name.replace('models/',''));
       return list.length?list:fallback;
@@ -1705,8 +1705,8 @@ async function callAI(messages,system,maxTokens=MAX_TOKENS){
         parts:[{text:m.content}]
       }));
       if(system){gcMsgs.unshift({role:'user',parts:[{text:system}]});gcMsgs.splice(1,0,{role:'model',parts:[{text:'Siap, saya mengerti.'}]});}
-      const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+activeModel+':generateContent?key='+activeApiKey,{
-        method:'POST',headers:{'Content-Type':'application/json'},
+      const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+activeModel+':generateContent',{
+        method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':activeApiKey},
         body:JSON.stringify({contents:gcMsgs,generationConfig:{maxOutputTokens:maxTokens}})
       });
       const d=await r.json();
