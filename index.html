@@ -1303,9 +1303,11 @@ ATURAN:
 5. JavaScript interaktif (vanilla, tanpa framework)
 6. Meta SEO lengkap
 
-FORMAT:
-- Buat/modifikasi website → HANYA kode diawali \`\`\`html dan diakhiri \`\`\`
-- Pertanyaan umum → teks biasa`;
+FORMAT OUTPUT (WAJIB DIIKUTI):
+- Jika diminta membuat/memodifikasi website → balas HANYA dengan blok kode diawali \`\`\`html dan diakhiri \`\`\` — TIDAK BOLEH ada teks di luar blok tersebut
+- Pertanyaan umum non-kode → teks biasa tanpa blok kode
+- JANGAN kirim HTML tanpa wrapper \`\`\`html ... \`\`\`
+- JANGAN beri penjelasan sebelum atau sesudah kode HTML`;
 
 async function sendMessage(){
   const input=document.getElementById('chat-input');
@@ -1317,7 +1319,7 @@ async function sendMessage(){
     currentProjectId=id;document.getElementById('current-proj-chip').textContent='Proyek Tanpa Judul';await loadAllProjects();
   }
 
-  input.value='';autoResize(input);addMessage('user',text);msgCount++;updateStats();
+  input.value='';autoResize(input);addMessage('user',esc(text),null,true);msgCount++;updateStats();
   document.getElementById('quick-prompts').style.display='none';
   isLoading=true;document.getElementById('send-btn').disabled=true;
   showTyping();conversationHistory.push({role:'user',content:text});
@@ -1331,16 +1333,32 @@ async function sendMessage(){
     clearInterval(iv);
     if(usage){tokenCount+=usage;updateStats();}
     conversationHistory.push({role:'assistant',content:aiText});removeTyping();
-    const m=aiText.match(/```html\s*([\s\S]*?)```/i);
-    if(m){
-      const html=m[1].trim();currentHTML=html;buildCount++;updateStats();
+
+    // --- Ekstraksi HTML robust: coba ```html ... ``` dulu, fallback ke raw DOCTYPE ---
+    let htmlCode=null;
+    const m1=aiText.match(/```html\s*([\s\S]*?)```/i);
+    if(m1){htmlCode=m1[1].trim();}
+    else{
+      // Gemini kadang mengirim raw HTML tanpa backtick — tangkap juga
+      const m2=aiText.match(/(<!DOCTYPE\s+html[\s\S]*?<\/html>)/i);
+      if(m2)htmlCode=m2[1].trim();
+    }
+
+    if(htmlCode){
+      currentHTML=htmlCode;buildCount++;updateStats();
       const p=currentProjectId?await dbGet('project:'+currentProjectId):null;
       lastGeneratedFilename=(p?.name||'ril-website').replace(/[^a-z0-9]/gi,'_').toLowerCase()+'.html';
-      autoDownloadFile(html,lastGeneratedFilename);
-      addMessage('ai','✅ File <strong>'+lastGeneratedFilename+'</strong> otomatis diunduh!',html);
-      updatePreview(html);if(cmEditor&&currentViewMode==='editor')setEditorContent(html);
+      autoDownloadFile(htmlCode,lastGeneratedFilename);
+      addMessage('ai','✅ File <strong>'+lastGeneratedFilename+'</strong> otomatis diunduh!',htmlCode);
+      updatePreview(htmlCode);
+      if(cmEditor&&currentViewMode==='editor')setEditorContent(htmlCode);
+      switchTab('preview'); // Auto-pindah ke preview setelah generate
       await saveProjectNow(currentProjectId);
-    } else {addMessage('ai',aiText);await saveProjectNow(currentProjectId);}
+    } else {
+      // Escape HTML agar teks AI tidak dirender sebagai HTML di chat bubble
+      addMessage('ai',esc(aiText),null,true);
+      await saveProjectNow(currentProjectId);
+    }
   }catch(e){clearInterval(iv);removeTyping();
     const msg=(e&&e.message)?e.message:'Kesalahan tidak diketahui';
     addMessage('ai','⚠️ Gagal: '+esc(msg)+'<br><span style="font-size:11px;color:var(--muted)">Cek: API key masih aktif? Kuota/rate limit? Model masih tersedia? Koneksi internet stabil?</span>');
@@ -1348,7 +1366,8 @@ async function sendMessage(){
   isLoading=false;document.getElementById('send-btn').disabled=false;
 }
 
-function addMessage(role,text,codeBlock){
+function addMessage(role,text,codeBlock,rawText){
+  // rawText=true → teks sudah di-escape, render apa adanya (untuk pesan AI non-kode)
   const msgs=document.getElementById('messages');
   const div=document.createElement('div');div.className='msg '+(role==='user'?'user':'ai');
   const isUser=role==='user';
@@ -1369,11 +1388,22 @@ function addMessage(role,text,codeBlock){
       <button class="msg-action-btn save" onclick="saveCurrentProject()">💾 Simpan</button>
     </div>`;
   }
-  div.innerHTML=`<div class="msg-avatar ${isUser?'user-av':'ai'}">${isUser?'U':'✦'}</div><div style="flex:1;min-width:0"><div class="msg-bubble">${fmt(text)}</div>${codeHTML}</div>`;
+  // rawText: pesan sudah di-escape → tampilkan dengan fmt biasa (HTML-safe)
+  // Pesan programatik (dengan <strong> dll): langsung gunakan text apa adanya
+  const rendered=rawText?fmt(text):text;
+  div.innerHTML=`<div class="msg-avatar ${isUser?'user-av':'ai'}">${isUser?'U':'✦'}</div><div style="flex:1;min-width:0"><div class="msg-bubble">${rendered}</div>${codeHTML}</div>`;
   msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;
 }
 
-function fmt(t){return t.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/`(.*?)`/g,'<code style="background:var(--panel);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:11px">$1</code>').replace(/\n/g,'<br>');}
+function fmt(t){
+  // Jika sudah di-escape (mengandung &lt; dll), jangan escape lagi — langsung format
+  const isEscaped=/&(?:lt|gt|amp|quot);/.test(t);
+  const safe=isEscaped?t:t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return safe
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/`(.*?)`/g,'<code style="background:var(--panel);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:11px">$1</code>')
+    .replace(/\n/g,'<br>');
+}
 function showTyping(){
   const m=document.getElementById('messages');const d=document.createElement('div');d.className='msg ai';d.id='typing';
   d.innerHTML='<div class="msg-avatar ai">✦</div><div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
