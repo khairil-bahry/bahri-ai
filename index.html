@@ -1458,8 +1458,21 @@ const PROVIDERS={
     detect:k=>k.startsWith('sk-or-')}
 };
 
+function sanitizeApiKey(raw){
+  let k=(raw||'').trim();
+  // Buang tanda kutip yang ikut ke-copy (mis. "AIzaSy..." atau 'AIzaSy...')
+  k=k.replace(/^['"`]+|['"`]+$/g,'').trim();
+  // Buang prefix ala env-var (mis. GEMINI_API_KEY=AIzaSy..., API_KEY: AIzaSy...)
+  const eqMatch=k.match(/[:=]\s*([A-Za-z0-9_\-\.]{15,})$/);
+  if(eqMatch)k=eqMatch[1];
+  // Buang semua whitespace/newline yang mungkin ikut ke-paste di tengah
+  k=k.replace(/\s+/g,'');
+  return k;
+}
+
 function detectProvider(key){
-  for(const[id,p]of Object.entries(PROVIDERS))if(p.detect(key.trim()))return id;
+  const k=sanitizeApiKey(key);
+  for(const[id,p]of Object.entries(PROVIDERS))if(p.detect(k))return id;
   return null;
 }
 
@@ -1510,12 +1523,14 @@ async function onApiKeyInput(val){
   _akTimer=setTimeout(async()=>{
     const provider=detectProvider(val);
     if(!provider){
-      setPbState('err','Provider tidak dikenal','Prefix key tidak cocok dengan provider manapun',null);return;
+      const clean=sanitizeApiKey(val);
+      const hint=clean.length>6?clean.slice(0,4)+'••••('+clean.length+' karakter)':'(terlalu pendek)';
+      setPbState('err','Provider tidak dikenal','Awalan terbaca: '+hint+' — pastikan key disalin utuh tanpa spasi/tanda kutip',null);return;
     }
     const p=PROVIDERS[provider];
     setPbState('loading',p.name,'Mengambil daftar model...',p.color);
     document.getElementById('pb-icon').textContent=p.icon;
-    const models=await fetchModels(provider,val.trim());
+    const models=await fetchModels(provider,sanitizeApiKey(val));
     _currentDetectedProvider=provider;_currentModels=models;
     if(models.length===0){
       setPbState('err',p.name,'Gagal mengambil model — periksa key',p.color);return;
@@ -1584,7 +1599,7 @@ function renderSavedKeys(){
 let activeKeyId='';
 
 async function saveApiKey(){
-  const key=document.getElementById('ak-input').value.trim();
+  const key=sanitizeApiKey(document.getElementById('ak-input').value);
   const model=document.getElementById('ak-model-select').value;
   const label=document.getElementById('ak-label-input').value.trim();
   if(!key||!_currentDetectedProvider||!model){showToast('⚠️ Lengkapi data key');return;}
